@@ -24,13 +24,18 @@ node server.js
 
 Then visit http://localhost:3000 to see the login page
 
+---
+
 ### API Endpoint
 
 To test login attempts using the fuzzer, send a POST request to http://localhost:3000/login with the following JSON format:
+
+```json
 {
     "username": "[USERNAME]",
     "password": "[PASSWORD]"
 }
+```
 
 ---
 
