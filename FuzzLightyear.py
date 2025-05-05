@@ -40,10 +40,12 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type):
 
         if(r.status_code == 404): # URL not found, abort process
             print("Error 404: URL not found")
+            print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
             exit(1)
 
         if r.status_code == 200: # Password successfully discovered
             print("{}{}".format("Success! Password is: ", generated_pass))
+            print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
             exit(0)
 
         PASSWORD_CACHE.add(generated_pass) # Add last guess to hash table to prevent repeat attempts
@@ -55,10 +57,12 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type):
 
         if(max_time != 0 and time.time()-start_time > max_time): # Check time-out timer
             print("Max Time Reached. Aborting Process")
+            print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
             exit(1)
 
         if(max_attempts != 0 and curr_attempt > max_attempts): # Check attempt counter
             print("Max Attempts Reached. Aborting Process")
+            print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
             exit(1)
 
 
@@ -227,7 +231,7 @@ def parse_args():
 def main():
     args = parse_args()
     # Placeholder for the main logic of the script
-    print("""
+    print(r"""
     Welcome to...
 v--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------v
 |  ______     __  __       ______      ______                  __           ________      _______      ___   ___      _________   __  __     ______       ________       ______        |
