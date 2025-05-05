@@ -32,19 +32,20 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type):
         generated_pass = output[0]
         past_mutation = output[1]
         curr_attempt += 1
+        print("{}{}{}{}".format("Attempt: ", curr_attempt, ", produced: ", generated_pass))
 
             # Submit Attempt
 
         payload = {"username": username, "password": generated_pass}
         r = requests.post(url, data=json.dumps(payload), headers={"Content-Type": "application/json"})
-
+        
         if(r.status_code == 404): # URL not found, abort process
-            print("Error 404: URL not found")
+            print("\nError 404: URL not found")
             print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
             exit(1)
 
         if r.status_code == 200: # Password successfully discovered
-            print("{}{}".format("Success! Password is: ", generated_pass))
+            print("{}{}".format("\nSuccess! Password is: ", generated_pass))
             print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
             exit(0)
 
@@ -53,15 +54,15 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type):
         if curr_attempt % 6324: # Clear hash table after every 6324 attempts
             PASSWORD_CACHE.clear()
 
-        print("{}{}{}{}".format("Attempt: ", curr_attempt, ", produced: ", generated_pass))
+        
 
         if(max_time != 0 and time.time()-start_time > max_time): # Check time-out timer
-            print("Max Time Reached. Aborting Process")
+            print("\nMax Time Reached. Aborting Process")
             print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
             exit(1)
 
         if(max_attempts != 0 and curr_attempt > max_attempts): # Check attempt counter
-            print("Max Attempts Reached. Aborting Process")
+            print("\nMax Attempts Reached. Aborting Process")
             print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
             exit(1)
 
