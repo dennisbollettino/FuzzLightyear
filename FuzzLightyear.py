@@ -3,14 +3,56 @@ import re
 import sys
 import random
 import string
-import requests
+import time
 
 """ Function manages the mutation loop and login attempts to the target URL"""
-def fuzz(seed, regex, max_attempts, url, username):
-    # maybe we could have an input flag that lets the user alternate between the different mutation strategies we talked about
-    pass
+"""Input Flags: 0 - Simple (only uses seed for mutations)
+                1 - Iterative (Mutates based off past mutations)
+                2 - Complex (Mutates multiple times before submission)"""
+def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type):
+    start_time = time.time()
+    curr_attempt = 0
+    past_mutation = seed
+    while(True):
+        output = mutation_handler(seed, past_mutation, regex, type, curr_attempt)
+        generated_pass = output[0]
+        past_mutation = output[1]
+        curr_attempt += 1
+        # Submit Attempt
 
-""" Function that handles one mutation """
+
+        print("{}{}".format("Attempt: ", curr_attempt))
+        # If attempt fails, check if time runs out or if max attempts reached
+        if(max_time != 0 and time.time()-start_time > max_time):
+            print("Max Time Reached. Aborting Process")
+            exit(1)
+        if(max_attempts != 0 and curr_attempt > max_attempts):
+            print("Max Attempts Reached. Aborting Process")
+            exit(1)
+
+
+
+"""Mutation handler function
+
+    This is called first from the fuzz() function. Depending on the fuzz type chosen, it will mutate differently"""
+def mutation_handler(seed, past_mutation, regex, type, curr_attempt):
+
+    if type == 0: # Simple mutation chosen, seed used in all runs
+        generated_pass = mutate(seed, regex)
+    if type == 1: # Iterative mutation chosen, past_mutation used as seed for next run. Resets after every 100 attempts
+        if curr_attempt % 100 == 0:
+            past_mutation = seed
+        generated_pass = mutate(past_mutation, regex)
+        past_mutation = generated_pass
+    if type == 2: # Complex mutation chosen, 2 mutates per run. Resets after every 50 attempts
+        if curr_attempt % 50 == 0:
+            past_mutation = seed
+        generated_pass = mutate(past_mutation, regex)
+        generated_pass = mutate(generated_pass, regex)
+        past_mutation = generated_pass
+    
+    return [generated_pass, past_mutation]
+
 def mutate(seed, regex):
     while True: # Loop until a valid candidate is found
         pwd = list(seed) # Convert seed to a list of characters for mutation
@@ -83,15 +125,18 @@ def parse_args():
                         help="Maximum execution time in seconds")
     parser.add_argument('--max-attempts', type=int, default=500,
                         help="Maximum number of password attempts")
+    parser.add_argument('--fuzz-type', type=int, default=0,
+                        help="Fuzzing Type (0 - Simple, 1 - Iterative, 2 - Complex)")
 
     args = parser.parse_args()
 
     # Custom post-checks
     if args.max_time <= 0:
         parser.error("max-time must be a positive integer")
-
-    if args.max_attempts <= 0:
+    if args.max_attempts < 0:
         parser.error("max-attempts must be a positive integer")
+    if args.fuzz_type < 0 or args.fuzz_type > 2:
+        parser.error("Fuzz Type must be 0, 1, or 2")
 
     return args
 
@@ -100,17 +145,31 @@ def main():
     args = parse_args()
 
     # Placeholder for the main logic of the script
-    """
+    print("""
+    Welcome to...
+v--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------v
+|  ______     __  __       ______      ______                  __           ________      _______      ___   ___      _________   __  __     ______       ________       ______        |
+| /_____/\   /_/\/_/\     /_____/\    /_____/\                /_/\         /_______/\    /______/\    /__/\ /__/\    /________/\ /_/\/_/\   /_____/\     /_______/\     /_____/\       |
+| \::::_\/_  \:\ \:\ \    \:::__\/    \:::__\/                \:\ \        \__.::._\/    \::::__\/__  \::\ \\  \ \   \__.::.__\/ \ \ \ \ \  \::::_\/_    \::: _  \ \    \:::_ \ \       |
+|  \:\/___/\  \:\ \:\ \      /: /        /: /                  \:\ \          \::\ \      \:\ /____/\  \::\/_\ .\ \     \::\ \    \:\_\ \ \  \:\/___/\    \::(_)  \ \    \:(_) ) )_    |
+|   \:::._\/   \:\ \:\ \    /::/___     /::/___                 \:\ \____     _\::\ \__    \:\\_  _\/   \:: ___::\ \     \::\ \    \::::_\/   \::___\/_    \:: __  \ \    \: __ `\ \    |
+|    \:\ \      \:\_\:\ \  /_:/____/\  /_:/____/\                \:\/___/\   /__\::\__/\    \:\_\ \ \    \: \ \\::\ \     \::\ \     \::\ \    \:\____/\    \:.\ \  \ \    \ \ `\ \ \   |
+|     \_\/       \_____\/  \_______\/  \_______\/                 \_____\/   \________\/     \_____\/     \__\/ \::\/      \__\/      \__\/     \_____\/     \__\/\__\/     \_\/ \_\/  |
+|                                                                                                                                                                                      |
+^--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------^                                                                                                                                                                                      
+
+    Current Settings: 
+""")
     print(f"URL: {args.url}")
     print(f"Username: {args.username}")
     print(f"Seed Password: {args.seed}")
     print(f"Regex Pattern: {args.regex}")
     print(f"Max Time: {args.max_time} seconds")
     print(f"Max Attempts: {args.max_attempts}")
-    """
+    print(f"Fuzz Type: {args.fuzz_type}")
+    input("\n\nPress enter when you are ready to begin fuzzing!")
 
-    # Call fuzz function with parsed arguments
-    #fuzz(args.seed, args.regex, args.max_attempts, args.url, args.username)
+    fuzz(args.seed, args.regex, args.max_attempts, args.max_time, args.url, args.username, args.fuzz_type)
 
 if __name__ == "__main__":
     main()
