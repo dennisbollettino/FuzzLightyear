@@ -277,14 +277,19 @@ v-------------------------------------------------------------------------------
 
     total_time = 0
     total_attempts = 0
+    success_count = 0
+    failure_count = 0
+
 
     for i in range(args.iterations):
         if args.iterations > 1:
             print(f"\n--- Fuzzing Iteration {i + 1} ---")
         password, attempts, elapsed = fuzz(args.seed, args.regex, args.max_attempts, args.max_time, args.url, args.username, args.fuzz_type, args.iterations, args.verbose)
         if args.iterations > 1 and password != None and not args.verbose:
+            success_count += 1
             print(f"Iteration {i + 1} succeeded in {elapsed:.2f} seconds after {attempts} attempts with password: {password}")
         elif args.iterations > 1 and password == None:
+            failure_count += 1
             print(f"Iteration {i + 1} failed after {attempts} attempts in {elapsed:.2f} seconds.")
         total_attempts += attempts
         total_time += elapsed
@@ -295,6 +300,8 @@ v-------------------------------------------------------------------------------
         avg_attempts = total_attempts / args.iterations
         print(f"Average Time: {avg_time:.2f} seconds")
         print(f"Average Attempts: {avg_attempts:.2f}")
+        print(f"Successes: {success_count}")
+        print(f"Failures: {failure_count}")
 
 if __name__ == "__main__":
     main()

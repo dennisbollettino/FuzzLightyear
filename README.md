@@ -35,7 +35,7 @@ To test login attempts using the fuzzer, send a POST request to http://localhost
     "username": "[USERNAME]",
     "password": "[PASSWORD]"
 }
-```json
+```
 
 ---
 
