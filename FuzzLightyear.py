@@ -9,6 +9,7 @@ import json
 
 # password regex: ^[A-Za-z0-9!?]{6,11}$
 REGEX = "^[A-Za-z0-9!?]{6,11}$"
+PASSWORD_CACHE = set()
 
 """ Function manages the mutation loop and login attempts to the target URL"""
 """Input Flags: 0 - Simple (only uses seed for mutations)
@@ -29,11 +30,13 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type):
         if(r.status_code == 404):
             print("Error 404: URL not found")
             exit(1)
-        print(r.status_code)
+
         if r.status_code == 200:
             print("{}{}".format("Success! Password is: ", generated_pass))
             exit(0)
-
+        PASSWORD_CACHE.add(generated_pass)
+        if curr_attempt % 6324:
+            PASSWORD_CACHE.clear()
         print("{}{}".format("Attempt: ", curr_attempt))
         # If attempt fails, check if time runs out or if max attempts reached
         if(max_time != 0 and time.time()-start_time > max_time):
@@ -101,8 +104,7 @@ def mutate(seed, regex):
             pwd[idx] = pwd[idx].swapcase()
 
         candidate = ''.join(pwd) # Convert list back to string
-
-        if re.fullmatch(regex, candidate): # Returns the candidate if it matches the regex pattern
+        if re.fullmatch(regex, candidate) and candidate not in PASSWORD_CACHE: # Returns the candidate if it matches the regex pattern
             return candidate
 
 """ Function to check whether a string is a valid regex pattern """
