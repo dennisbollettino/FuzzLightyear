@@ -5,6 +5,7 @@ import random
 import string
 import time
 import requests
+import json
 
 # password regex: ^[A-Za-z0-9!?]{6,11}$
 REGEX = "^[A-Za-z0-9!?]{6,11}$"
@@ -23,7 +24,8 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type):
         past_mutation = output[1]
         curr_attempt += 1
         # Submit Attempt
-        r = requests.post(url, data={"username": username, "password": generated_pass})
+        payload = {"username": username, "password": generated_pass}
+        r = requests.post(url, data=json.dumps(payload), headers={"Content-Type": "application/json"})
         if(r.status_code == 404):
             print("Error 404: URL not found")
             exit(1)
@@ -31,6 +33,7 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type):
         if r.status_code == 200:
             print("{}{}".format("Success! Password is: ", generated_pass))
             exit(0)
+
         print("{}{}".format("Attempt: ", curr_attempt))
         # If attempt fails, check if time runs out or if max attempts reached
         if(max_time != 0 and time.time()-start_time > max_time):
@@ -48,12 +51,12 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type):
 def mutation_handler(seed, past_mutation, regex, type, curr_attempt):
     if type == 0: # Simple mutation chosen, seed used in all runs
         generated_pass = mutate(seed, regex)
-    if type == 1: # Iterative mutation chosen, past_mutation used as seed for next run. Resets after every 100 attempts
+    if type == 1: # Iterative mutation chosen, past_mutation used as seed for next run. Resets after every 25 attempts
         if curr_attempt % 25 == 0:
             past_mutation = seed
         generated_pass = mutate(past_mutation, regex)
         past_mutation = generated_pass
-    if type == 2: # Complex mutation chosen, 2 mutates per run. Resets after every 50 attempts
+    if type == 2: # Complex mutation chosen, 2 mutates per run. Resets after every 10 attempts
         if curr_attempt % 10 == 0:
             past_mutation = seed
         generated_pass = mutate(past_mutation, regex)
