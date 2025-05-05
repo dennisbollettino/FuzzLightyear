@@ -9,7 +9,7 @@ import json
 # DEFAULT_REGEX = "^[A-Za-z0-9!?]{6,11}$"
 PASSWORD_CACHE = set()
 
-def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type):
+def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type, iterations, verbose):
     """
     Main fuzzer driver function
 
@@ -21,6 +21,8 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type):
         url (string): target url
         username (string): target username
         fuzz_type (int): Fuzzing mode (0: Simple, 1: Iterative, 2: Complex)
+        iterations (int): Number of iterations to run on this seed (for testing)
+        verbose (bool): Suppress per-attempt output during fuzzing
     """
 
     start_time = time.time() # Start time-out timer
@@ -32,7 +34,9 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type):
         generated_pass = output[0]
         past_mutation = output[1]
         curr_attempt += 1
-        print("{}{}{}{}".format("Attempt: ", curr_attempt, ", produced: ", generated_pass))
+
+        if verbose:
+            print("{}{}{}{}".format("Attempt: ", curr_attempt, ", produced: ", generated_pass))
 
             # Submit Attempt
 
@@ -41,13 +45,17 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type):
         
         if(r.status_code == 404): # URL not found, abort process
             print("\nError 404: URL not found")
-            print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
+            if verbose:
+                print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
+                print("Total Attempts: {}".format(curr_attempt))
             exit(1)
 
         if r.status_code == 200: # Password successfully discovered
-            print("{}{}".format("\nSuccess! Password is: ", generated_pass))
-            print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
-            exit(0)
+            if iterations == 1 or verbose:
+                print("{}{}".format("\nSuccess! Password is: ", generated_pass))
+                print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
+                print("Total Attempts: {}".format(curr_attempt))
+            return generated_pass, curr_attempt, time.time() - start_time,
 
         PASSWORD_CACHE.add(generated_pass) # Add last guess to hash table to prevent repeat attempts
 
@@ -57,14 +65,18 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type):
         
 
         if(max_time != 0 and time.time()-start_time > max_time): # Check time-out timer
-            print("\nMax Time Reached. Aborting Process")
-            print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
-            exit(1)
+            if verbose:
+                print("\nMax Time Reached. Aborting Process")
+                print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
+                print("Total Attempts: {}".format(curr_attempt))
+            return None, curr_attempt, time.time() - start_time
 
         if(max_attempts != 0 and curr_attempt > max_attempts): # Check attempt counter
-            print("\nMax Attempts Reached. Aborting Process")
-            print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
-            exit(1)
+            if verbose:
+                print("\nMax Attempts Reached. Aborting Process")
+                print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
+                print("Total Attempts: {}".format(curr_attempt))
+            return None, curr_attempt, time.time() - start_time
 
 
 def mutation_handler(seed, past_mutation, regex, fuzz_type, curr_attempt):
@@ -213,7 +225,11 @@ def parse_args():
                         help="Maximum number of password attempts")
     parser.add_argument('--fuzz-type', type=int, default=0,
                         help="Fuzzing Type (0 - Simple, 1 - Iterative, 2 - Complex)")
-
+    parser.add_argument('--iterations', type=int, default = 1,
+                        help="Number of iterations to run on this seed (for testing)")
+    parser.add_argument('--verbose', action='store_true', default=False,
+                    help="Suppress per-attempt output during fuzzing")
+    
     args = parser.parse_args()
 
     # Custom post-checks
@@ -254,9 +270,31 @@ v-------------------------------------------------------------------------------
     print(f"Max Time: {args.max_time} seconds")
     print(f"Max Attempts: {args.max_attempts}")
     print(f"Fuzz Type: {args.fuzz_type}")
+    print(f"Iterations: {args.iterations}")
+    print(f"Verbose: {args.verbose}")
+    print("\n\nFuzz Lightyear is ready to launch!\n")
     input("\n\nPress enter when you are ready to begin fuzzing!")
 
-    fuzz(args.seed, args.regex, args.max_attempts, args.max_time, args.url, args.username, args.fuzz_type)
+    total_time = 0
+    total_attempts = 0
+
+    for i in range(args.iterations):
+        if args.iterations > 1:
+            print(f"\n--- Fuzzing Iteration {i + 1} ---")
+        password, attempts, elapsed = fuzz(args.seed, args.regex, args.max_attempts, args.max_time, args.url, args.username, args.fuzz_type, args.iterations, args.verbose)
+        if args.iterations > 1 and password != None and not args.verbose:
+            print(f"Iteration {i + 1} succeeded in {elapsed:.2f} seconds after {attempts} attempts with password: {password}")
+        elif args.iterations > 1 and password == None:
+            print(f"Iteration {i + 1} failed after {attempts} attempts in {elapsed:.2f} seconds.")
+        total_attempts += attempts
+        total_time += elapsed
+
+    if args.iterations > 1:
+        print("\n=== Summary ===")
+        avg_time = total_time / args.iterations
+        avg_attempts = total_attempts / args.iterations
+        print(f"Average Time: {avg_time:.2f} seconds")
+        print(f"Average Attempts: {avg_attempts:.2f}")
 
 if __name__ == "__main__":
     main()
