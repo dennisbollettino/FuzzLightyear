@@ -23,6 +23,8 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type, iteratio
         fuzz_type (int): Fuzzing mode (0: Simple, 1: Iterative, 2: Complex)
         iterations (int): Number of iterations to run on this seed (for testing)
         verbose (bool): Suppress per-attempt output during fuzzing
+    Returns:
+        Tuple(string, int, int): Returns a tuple of the generated password (if any), attempts taken, and time elapsed
     """
 
     start_time = time.time() # Start time-out timer
@@ -90,7 +92,7 @@ def mutation_handler(seed, past_mutation, regex, fuzz_type, curr_attempt):
         fuzz_type (int): Fuzzing mode (0: Simple, 1: Iterative, 2: Complex)
         curr_attempt (int): Current attempt number
     Returns:
-        Tuple: First value is generated password to attempt, Second value is the past attempt
+        Tuple(string, string): First value is generated password to attempt, Second value is the past attempt
     """
 
     if fuzz_type == 0: # Simple mutation chosen, seed used in all runs
