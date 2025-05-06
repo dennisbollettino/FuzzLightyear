@@ -30,6 +30,7 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type, iteratio
     start_time = time.time() # Start time-out timer
     curr_attempt = 0 # current attempt
     past_mutation = seed # setting first iteration of past_mutation to seed
+    s = requests.Session()
 
     while(True):
         output = mutation_handler(seed, past_mutation, regex, fuzz_type, curr_attempt) 
@@ -43,13 +44,14 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type, iteratio
             # Submit Attempt
 
         payload = {"username": username, "password": generated_pass}
-        r = requests.post(url, data=json.dumps(payload), headers={"Content-Type": "application/json"})
+        r = s.post(url, data=json.dumps(payload), headers={"Content-Type": "application/json"})
         
         if(r.status_code == 404): # URL not found, abort process
             print("\nError 404: URL not found")
             if verbose:
                 print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
                 print("Total Attempts: {}".format(curr_attempt))
+                s.close()
             exit(1)
 
         if r.status_code == 200: # Password successfully discovered
@@ -57,6 +59,7 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type, iteratio
                 print("{}{}".format("\nSuccess! Password is: ", generated_pass))
                 print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
                 print("Total Attempts: {}".format(curr_attempt))
+            s.close()
             return generated_pass, curr_attempt, max((time.time() - start_time), 0)
 
         PASSWORD_CACHE.add(generated_pass) # Add last guess to hash table to prevent repeat attempts
@@ -71,6 +74,7 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type, iteratio
                 print("\nMax Time Reached. Aborting Process")
                 print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
                 print("Total Attempts: {}".format(curr_attempt))
+            s.close()
             return None, curr_attempt, max((time.time() - start_time), 0)
 
         if(max_attempts != 0 and curr_attempt > max_attempts): # Check attempt counter
@@ -78,6 +82,7 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type, iteratio
                 print("\nMax Attempts Reached. Aborting Process")
                 print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
                 print("Total Attempts: {}".format(curr_attempt))
+            s.close()
             return None, curr_attempt, max((time.time() - start_time), 0)
 
 
