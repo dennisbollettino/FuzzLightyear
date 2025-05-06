@@ -55,7 +55,7 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type, iteratio
                 print("{}{}".format("\nSuccess! Password is: ", generated_pass))
                 print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
                 print("Total Attempts: {}".format(curr_attempt))
-            return generated_pass, curr_attempt, time.time() - start_time,
+            return generated_pass, curr_attempt, max((time.time() - start_time), 0)
 
         PASSWORD_CACHE.add(generated_pass) # Add last guess to hash table to prevent repeat attempts
 
@@ -63,20 +63,20 @@ def fuzz(seed, regex, max_attempts, max_time, url, username, fuzz_type, iteratio
             PASSWORD_CACHE.clear()
 
         
-
-        if(max_time != 0 and time.time()-start_time > max_time): # Check time-out timer
+        elapsed_time = time.time() - start_time
+        if(max_time != 0 and (time.time()-start_time) > max_time): # Check time-out timer
             if verbose:
                 print("\nMax Time Reached. Aborting Process")
                 print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
                 print("Total Attempts: {}".format(curr_attempt))
-            return None, curr_attempt, time.time() - start_time
+            return None, curr_attempt, max((time.time() - start_time), 0)
 
         if(max_attempts != 0 and curr_attempt > max_attempts): # Check attempt counter
             if verbose:
                 print("\nMax Attempts Reached. Aborting Process")
                 print("Total Execution Time: {:.2f} seconds".format(time.time() - start_time))
                 print("Total Attempts: {}".format(curr_attempt))
-            return None, curr_attempt, time.time() - start_time
+            return None, curr_attempt, max((time.time() - start_time), 0)
 
 
 def mutation_handler(seed, past_mutation, regex, fuzz_type, curr_attempt):
@@ -276,7 +276,9 @@ v-------------------------------------------------------------------------------
     input("\n\nPress enter when you are ready to begin fuzzing!")
 
     total_time = 0
+    total_time_success = 0
     total_attempts = 0
+    total_attempts_success = 0
     success_count = 0
     failure_count = 0
 
@@ -285,21 +287,27 @@ v-------------------------------------------------------------------------------
         if args.iterations > 1:
             print(f"\n--- Fuzzing Iteration {i + 1} ---")
         password, attempts, elapsed = fuzz(args.seed, args.regex, args.max_attempts, args.max_time, args.url, args.username, args.fuzz_type, args.iterations, args.verbose)
+        total_attempts += attempts
+        total_time += elapsed
         if args.iterations > 1 and password != None and not args.verbose:
+            total_attempts_success += attempts
+            total_time_success += elapsed
             success_count += 1
             print(f"Iteration {i + 1} succeeded in {elapsed:.2f} seconds after {attempts} attempts with password: {password}")
         elif args.iterations > 1 and password == None:
             failure_count += 1
-            print(f"Iteration {i + 1} failed after {attempts} attempts in {elapsed:.2f} seconds.")
-        total_attempts += attempts
-        total_time += elapsed
-
+            print(f"Iteration {i + 1} failed after {elapsed:.2f} seconds with {attempts} attempts")
+            
     if args.iterations > 1:
         print("\n=== Summary ===")
         avg_time = total_time / args.iterations
+        avg_time_success = total_time_success / success_count if success_count > 0 else 0
         avg_attempts = total_attempts / args.iterations
-        print(f"Average Time: {avg_time:.2f} seconds")
-        print(f"Average Attempts: {avg_attempts:.2f}")
+        avg_attempts_success = total_attempts_success / success_count if success_count > 0 else 0
+        print(f"Total Average Time: {avg_time:.2f} seconds")
+        print(f"Total Average Attempts: {avg_attempts:.2f}")
+        print(f"Average Time for Successful Iterations: {avg_time_success:.2f} seconds")
+        print(f"Average Attempts for Successful Iterations: {avg_attempts_success:.2f}")
         print(f"Successes: {success_count}")
         print(f"Failures: {failure_count}")
 
